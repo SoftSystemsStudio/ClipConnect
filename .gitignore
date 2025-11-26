@@ -5,3 +5,4 @@ node_modules
 /.vscode
 /prisma/.env
 /public/uploads
+prisma/dev.db
