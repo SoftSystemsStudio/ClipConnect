@@ -6,7 +6,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== 'GET') return res.status(405).end()
   const posts = await prisma.post.findMany({ orderBy: { createdAt: 'desc' }, take: 50 })
 
-  const parsed = posts.map(p => ({
+  const parsed = posts.map((p: any) => ({
     ...p,
     mediaUrls: p.mediaUrls ? JSON.parse(p.mediaUrls as unknown as string) : [],
     styleTags: p.styleTags ? JSON.parse(p.styleTags as unknown as string) : [],
@@ -18,7 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.json(parsed)
   }
 
-  const postIds = posts.map(p => p.id)
+  const postIds = posts.map((p: any) => p.id)
   const likes = await prisma.like.findMany({ where: { userId: user.id, postId: { in: postIds } } })
   const saved = await prisma.savedItem.findMany({ where: { userId: user.id, itemType: 'POST', itemId: { in: postIds } } })
 
