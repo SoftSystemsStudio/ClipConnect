@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              Int      @id @default(autoincrement())
+  email           String   @unique
+  passwordHash    String
+  name            String?
+  role            String
+  profilePhotoUrl String?
+  location        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  professional    ProfessionalProfile?
+  client          ClientProfile?
+  posts           Post[]
+  clientReviews   Review[] @relation("client_reviews")
+  professionalReviews Review[] @relation("professional_reviews")
+  followers       Follow[] @relation("user_followed")
+  following       Follow[] @relation("user_follower")
+  savedItems      SavedItem[]
+  likes           Like[]
+}
+
+model ProfessionalProfile {
+  id                    Int     @id @default(autoincrement())
+  userId                Int     @unique
+  bio                   String?
+  specialties           String
+  hairTypesServed       String
+  priceRange            String?
+  shopName              String?
+  shopAddress           String?
+  bookingUrl            String?
+  experienceYears       Int?
+  certifications        String
+  averageRating         Float?  @default(0)
+  reviewsCount          Int     @default(0)
+  minCutDurationMinutes Int?
+  maxCutDurationMinutes Int?
+  user                  User    @relation(fields: [userId], references: [id])
+  tools                 ToolProduct[]
+}
+
+model ClientProfile {
+  id                        Int    @id @default(autoincrement())
+  userId                    Int    @unique
+  hairTypes                 String
+  usualStyles               String
+  preferredPriceRange       String?
+  defaultCity               String?
+  haircutProfilePhotos      String
+  typicalCutDurationMinutes Int?
+  user                      User   @relation(fields: [userId], references: [id])
+}
+
+model Post {
+  id                       Int      @id @default(autoincrement())
+  professionalId           Int
+  mediaUrls                String
+  caption                  String?
+  styleTags                String
+  hairTypeTags             String
+  location                 String?
+  createdAt                DateTime @default(now())
+  likeCount                Int      @default(0)
+  saveCount                Int      @default(0)
+  estimatedDurationMinutes Int?
+  professional             User     @relation(fields: [professionalId], references: [id])
+  likes                    Like[]
+}
+
+model ToolProduct {
+  id            Int      @id @default(autoincrement())
+  professionalId Int
+  name          String
+  category      String
+  description   String?
+  affiliateUrl  String?
+  clickCount    Int      @default(0)
+  createdAt     DateTime @default(now())
+  professional  ProfessionalProfile @relation(fields: [professionalId], references: [id])
+}
+
+model Review {
+  id                    Int      @id @default(autoincrement())
+  professionalId        Int
+  clientId              Int
+  rating                Int
+  text                  String?
+  createdAt             DateTime @default(now())
+  actualDurationMinutes Int?
+  professional          User     @relation("professional_reviews", fields: [professionalId], references: [id])
+  client                User     @relation("client_reviews", fields: [clientId], references: [id])
+}
+
+model Follow {
+  id                      Int      @id @default(autoincrement())
+  followerUserId          Int
+  followedProfessionalId  Int
+  createdAt               DateTime @default(now())
+  follower                User     @relation("user_follower", fields: [followerUserId], references: [id])
+  followedProfessional    User     @relation("user_followed", fields: [followedProfessionalId], references: [id])
+}
+
+model SavedItem {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  itemType  String
+  itemId    Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Like {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  postId    Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id])
+
+  @@unique([userId, postId])
+}
