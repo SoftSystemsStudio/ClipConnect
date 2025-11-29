@@ -12,7 +12,7 @@
     "prisma:seed:example": "node -r ts-node/register prisma/seed.example.ts",
     "seed": "npm run prisma:seed",
     "seed:example": "npm run prisma:seed:example",
-    "lint": "eslint . --ext .js,.ts,.tsx",
+    "lint": "eslint -c .eslintrc.json . --ext .js,.ts,.tsx",
     "test": "jest --passWithNoTests"
   },
   "dependencies": {
