@@ -1,0 +1,13 @@
+.next
+node_modules
+dist
+coverage
+build
+.venv
+*.log
+*.sqlite
+dev.db
+/.vscode
+/.husky
+prisma/migrations
+/.git
