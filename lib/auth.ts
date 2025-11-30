@@ -14,7 +14,7 @@ export async function getUserFromRequest(req: NextApiRequest) {
     const payload:any = jwt.verify(token, JWT_SECRET)
     const user = await prisma.user.findUnique({ where: { id: payload.userId } })
     return user
-  } catch (e) {
+  } catch {
     return null
   }
 }

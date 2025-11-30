@@ -14,7 +14,7 @@ async function main() {
     }
   })
 
-  const client = await prisma.user.create({
+  await prisma.user.create({
     data: {
       email: 'client.example@clipconnect.test',
       passwordHash: 'changeme',

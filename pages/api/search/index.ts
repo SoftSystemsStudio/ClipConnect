@@ -9,7 +9,7 @@ function parseListParam(v: any) {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).end()
-  const { city, zip, radius, styleTags, hairTypes, minRating, priceMin, priceMax, q, page } = req.query
+  const { city, styleTags, hairTypes, minRating, priceMin, priceMax, q, page } = req.query
 
   const styles = parseListParam(styleTags)
   const hair = parseListParam(hairTypes)

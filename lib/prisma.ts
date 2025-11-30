@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client'
 
 declare global {
   // allow global prisma across HMR in development
-  // eslint-disable-next-line no-var
+   
   var prisma: PrismaClient | undefined
 }
 
