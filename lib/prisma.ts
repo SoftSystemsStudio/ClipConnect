@@ -1,9 +1,11 @@
-import { PrismaClient } from '@prisma/client'
+// Ensure the environment requests a binary engine for Prisma in test/dev
+process.env.PRISMA_CLIENT_ENGINE_TYPE = process.env.PRISMA_CLIENT_ENGINE_TYPE || 'binary'
+
+const { PrismaClient } = require('@prisma/client')
 
 declare global {
   // allow global prisma across HMR in development
-   
-  var prisma: PrismaClient | undefined
+  var prisma: any
 }
 
 // Build options dynamically so Prisma v7 (which may require passing
