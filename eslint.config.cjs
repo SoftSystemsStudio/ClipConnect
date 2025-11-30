@@ -12,11 +12,14 @@ module.exports = [
     },
     plugins: {
       '@typescript-eslint': require('@typescript-eslint/eslint-plugin'),
+      prettier: require('eslint-plugin-prettier'),
     },
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       'no-unused-vars': 'off',
+      // Run Prettier as an ESLint rule and report formatting issues as errors
+      'prettier/prettier': ['error', require('./.prettierrc')],
     },
   },
 ]
