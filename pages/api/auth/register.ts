@@ -1,6 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import prisma from '../../../lib/prisma';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 
 export default async function handler(
   req: NextApiRequest,
@@ -41,5 +44,13 @@ export default async function handler(
       } as any,
     });
   }
-  res.status(201).json({ id: user.id, email: user.email });
+
+  // Auto-login: set JWT cookie
+  const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '30d' });
+  res.setHeader(
+    'Set-Cookie',
+    `clipconnect_token=${token}; HttpOnly; Path=/; Max-Age=${60 * 60 * 24 * 30}; SameSite=Strict`
+  );
+
+  res.status(201).json({ id: user.id, email: user.email, role: user.role });
 }

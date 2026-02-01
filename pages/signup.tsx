@@ -44,7 +44,12 @@ export default function Signup() {
         body: JSON.stringify({ email, password, name, role }),
       });
       if (res.ok) {
-        router.push('/signin');
+        // User is auto-logged in, redirect to onboarding
+        if (role === 'PRO') {
+          router.push('/onboarding/pro');
+        } else {
+          router.push('/onboarding/client');
+        }
       } else {
         const data = await res.json().catch(() => ({}));
         setError(data.error || 'Failed to create account');
