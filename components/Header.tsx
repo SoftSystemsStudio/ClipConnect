@@ -76,6 +76,12 @@ export default function Header() {
               >
                 {user.name || 'Profile'}
               </Link>
+              <Link
+                href="/profile/edit"
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                Edit
+              </Link>
               <button
                 onClick={handleLogout}
                 className="px-3 py-1 rounded-md text-sm font-medium border border-gray-300 hover:bg-gray-50"

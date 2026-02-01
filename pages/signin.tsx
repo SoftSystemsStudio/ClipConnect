@@ -87,12 +87,19 @@ export default function Signin() {
         </button>
       </form>
 
-      <p className="mt-4 text-sm text-gray-600">
-        Don&apos;t have an account?{' '}
-        <Link href="/signup" className="text-indigo-600">
-          Sign up
-        </Link>
-      </p>
+      <div className="mt-4 space-y-2 text-sm text-gray-600">
+        <p>
+          Don&apos;t have an account?{' '}
+          <Link href="/signup" className="text-indigo-600">
+            Sign up
+          </Link>
+        </p>
+        <p>
+          <Link href="/forgot-password" className="text-indigo-600">
+            Forgot your password?
+          </Link>
+        </p>
+      </div>
     </main>
   );
 }
