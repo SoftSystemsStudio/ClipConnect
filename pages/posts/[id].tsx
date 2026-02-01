@@ -1,12 +1,30 @@
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 
+type User = {
+  id: number;
+  role: string;
+};
+
 export default function PostDetail() {
   const router = useRouter();
   const { id } = router.query;
   const [post, setPost] = useState<any>(null);
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editCaption, setEditCaption] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    // Fetch current user
+    fetch('/api/profile/me', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setCurrentUser)
+      .catch(() => setCurrentUser(null));
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -15,6 +33,8 @@ export default function PostDetail() {
       .then((data: any) => {
         setPost(data);
         setLiked(!!data.likedByCurrentUser);
+        setEditCaption(data.caption || '');
+        setEditLocation(data.location || '');
       });
   }, [id]);
 
@@ -44,33 +64,183 @@ export default function PostDetail() {
     }
   }
 
-  if (!post) return <main style={{ padding: 24 }}>Loading...</main>;
+  async function handleDelete() {
+    if (!confirm('Are you sure you want to delete this post?')) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/posts/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (res.ok) {
+        router.push('/');
+      } else {
+        alert('Failed to delete post');
+      }
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  async function handleSaveEdit() {
+    const res = await fetch(`/api/posts/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        caption: editCaption,
+        location: editLocation,
+      }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setPost(updated);
+      setIsEditing(false);
+    } else {
+      alert('Failed to update post');
+    }
+  }
+
+  if (!post) return <main className="p-6">Loading...</main>;
+
+  const isOwner = currentUser && post.professionalId === currentUser.id;
 
   return (
-    <main style={{ padding: 24 }}>
-      <h1>{post.caption || 'Post'}</h1>
-      <div>By pro #{post.professionalId}</div>
-      <div>Location: {post.location}</div>
-      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-        {(post.mediaUrls || []).map((u: string, i: number) => (
-          <img
-            key={i}
-            src={u}
-            alt={`media-${i}`}
-            style={{ width: 200, height: 200, objectFit: 'cover' }}
-          />
-        ))}
-      </div>
-      <div style={{ marginTop: 12 }}>
-        <button onClick={like}>
-          {liked ? 'Liked' : `Like (${post.likeCount || 0})`}
-        </button>
-        <button onClick={toggleSave} style={{ marginLeft: 8 }}>
-          {saved ? 'Unsave' : 'Save'}
-        </button>
-      </div>
-      <div style={{ marginTop: 16 }}>
-        <strong>Tags:</strong> {(post.styleTags || []).join(', ')}
+    <main className="p-6 max-w-2xl mx-auto">
+      <div className="bg-white rounded-lg shadow p-6">
+        {isEditing ? (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Caption</label>
+              <input
+                value={editCaption}
+                onChange={(e) => setEditCaption(e.target.value)}
+                className="w-full border rounded px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Location</label>
+              <input
+                value={editLocation}
+                onChange={(e) => setEditLocation(e.target.value)}
+                className="w-full border rounded px-3 py-2"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleSaveEdit}
+                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+              >
+                Save Changes
+              </button>
+              <button
+                onClick={() => setIsEditing(false)}
+                className="px-4 py-2 border rounded hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-start justify-between">
+              <div>
+                <h1 className="text-2xl font-semibold">
+                  {post.caption || 'Post'}
+                </h1>
+                <a
+                  href={`/profiles/${post.professionalId}`}
+                  className="text-indigo-600 text-sm"
+                >
+                  View professional profile
+                </a>
+                {post.location && (
+                  <div className="text-sm text-gray-600 mt-1">
+                    Location: {post.location}
+                  </div>
+                )}
+              </div>
+
+              {isOwner && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="px-3 py-1 text-sm border rounded hover:bg-gray-50"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="px-3 py-1 text-sm border border-red-300 text-red-600 rounded hover:bg-red-50 disabled:opacity-50"
+                  >
+                    {deleting ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {(post.mediaUrls || []).length > 0 && (
+              <div className="flex gap-2 mt-4 overflow-x-auto">
+                {post.mediaUrls.map((u: string, i: number) => (
+                  <img
+                    key={i}
+                    src={u}
+                    alt={`media-${i}`}
+                    className="w-48 h-48 object-cover rounded"
+                  />
+                ))}
+              </div>
+            )}
+
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={like}
+                className={`px-4 py-2 rounded ${
+                  liked
+                    ? 'bg-pink-100 text-pink-700'
+                    : 'border hover:bg-gray-50'
+                }`}
+              >
+                {liked ? '♥ Liked' : `♡ Like`} ({post.likeCount || 0})
+              </button>
+              <button
+                onClick={toggleSave}
+                className={`px-4 py-2 rounded ${
+                  saved
+                    ? 'bg-indigo-100 text-indigo-700'
+                    : 'border hover:bg-gray-50'
+                }`}
+              >
+                {saved ? '★ Saved' : '☆ Save'}
+              </button>
+            </div>
+
+            {(post.styleTags || []).length > 0 && (
+              <div className="mt-4">
+                <span className="font-medium">Style Tags:</span>{' '}
+                <span className="text-gray-700">
+                  {post.styleTags.join(', ')}
+                </span>
+              </div>
+            )}
+
+            {(post.hairTypeTags || []).length > 0 && (
+              <div className="mt-2">
+                <span className="font-medium">Hair Types:</span>{' '}
+                <span className="text-gray-700">
+                  {post.hairTypeTags.join(', ')}
+                </span>
+              </div>
+            )}
+
+            {post.estimatedDurationMinutes && (
+              <div className="mt-2 text-sm text-gray-600">
+                Estimated duration: {post.estimatedDurationMinutes} minutes
+              </div>
+            )}
+          </>
+        )}
       </div>
     </main>
   );
