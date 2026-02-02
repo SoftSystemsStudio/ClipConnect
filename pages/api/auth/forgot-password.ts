@@ -4,6 +4,7 @@ import prisma from '../../../lib/prisma';
 import { sendPasswordResetEmail } from '../../../lib/email';
 import { rateLimit } from '../../../lib/middleware/rate-limit';
 import { createAuditLog } from '../../../lib/audit';
+import { isValidEmail, normalizeEmail } from '../../../lib/validation';
 
 // Strict rate limiting: 3 requests per hour
 const forgotPasswordRateLimit = rateLimit({
@@ -23,8 +24,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: 'Email is required' });
   }
 
+  // Validate and normalize email
+  const normalizedEmail = normalizeEmail(email);
+  if (!isValidEmail(normalizedEmail)) {
+    return res.status(400).json({ error: 'Please enter a valid email address' });
+  }
+
   // Check if user exists
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
 
   // Always return success to prevent email enumeration
   if (!user) {

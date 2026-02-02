@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { useDebounce } from '../hooks/useDebounce';
 
 type ProCard = {
   id: number;
@@ -18,17 +19,23 @@ export default function Explore() {
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
-  async function search(pageNum = 1, reset = true) {
+  // Debounce search inputs to avoid excessive API calls
+  const debouncedCity = useDebounce(city, 400);
+  const debouncedStyles = useDebounce(styles, 400);
+  const debouncedHairTypes = useDebounce(hairTypes, 400);
+  const debouncedMinRating = useDebounce(minRating, 400);
+
+  const search = useCallback(async (pageNum = 1) => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (city) params.set('city', city);
-    if (styles) params.set('styleTags', styles);
-    if (hairTypes) params.set('hairTypes', hairTypes);
-    if (minRating) params.set('minRating', minRating);
+    if (debouncedCity) params.set('city', debouncedCity);
+    if (debouncedStyles) params.set('styleTags', debouncedStyles);
+    if (debouncedHairTypes) params.set('hairTypes', debouncedHairTypes);
+    if (debouncedMinRating) params.set('minRating', debouncedMinRating);
     params.set('page', String(pageNum));
 
     try {
-      const res = await fetch('/api/search?' + params.toString());
+      const res = await fetch('/api/search?' + params.toString(), { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         setPros(data.results);
@@ -39,11 +46,12 @@ export default function Explore() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [debouncedCity, debouncedStyles, debouncedHairTypes, debouncedMinRating]);
 
+  // Auto-search when debounced values change
   useEffect(() => {
     search(1);
-  }, []);
+  }, [search]);
 
   function handleSearch() {
     setPage(1);

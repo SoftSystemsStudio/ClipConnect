@@ -13,6 +13,7 @@ type User = {
 export default function Header() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -24,6 +25,17 @@ export default function Header() {
       .then((data) => {
         setUser(data);
         setLoading(false);
+        if (data) {
+          // Fetch unread notification count
+          fetch('/api/notifications?limit=1', { credentials: 'include' })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((notifData) => {
+              if (notifData?.unreadCount) {
+                setUnreadCount(notifData.unreadCount);
+              }
+            })
+            .catch(() => {});
+        }
       })
       .catch(() => {
         setUser(null);
@@ -59,12 +71,37 @@ export default function Header() {
             </Link>
           )}
           {user && (
-            <Link
-              href="/saved"
-              className="text-sm text-gray-600 hover:text-gray-900"
-            >
-              Saved
-            </Link>
+            <>
+              <Link
+                href="/saved"
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                Saved
+              </Link>
+              <Link
+                href="/bookings"
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                Bookings
+              </Link>
+              <Link
+                href="/notifications"
+                className="relative text-sm text-gray-600 hover:text-gray-900"
+              >
+                Notifications
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-2 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </Link>
+              <Link
+                href="/messages"
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                Messages
+              </Link>
+            </>
           )}
           {loading ? (
             <span className="text-sm text-gray-400">...</span>

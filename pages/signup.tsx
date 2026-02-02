@@ -41,6 +41,7 @@ export default function Signup() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, password, name, role }),
       });
       if (res.ok) {

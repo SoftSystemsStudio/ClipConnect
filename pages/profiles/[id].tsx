@@ -51,9 +51,9 @@ export default function ProfilePage() {
 
     // Fetch all data in parallel
     Promise.all([
-      fetch(`/api/profile/${id}`).then((r) => r.json()),
-      fetch('/api/posts').then((r) => r.json()),
-      fetch(`/api/reviews/pro/${id}`).then((r) => r.json()).catch(() => []),
+      fetch(`/api/profile/${id}`, { credentials: 'include' }).then((r) => r.json()),
+      fetch('/api/posts', { credentials: 'include' }).then((r) => r.json()),
+      fetch(`/api/reviews/pro/${id}`, { credentials: 'include' }).then((r) => r.json()).catch(() => []),
       fetch(`/api/tools?proId=${id}`, { credentials: 'include' }).then((r) => r.ok ? r.json() : []).catch(() => []),
       fetch(`/api/follow/list?userId=${id}`, { credentials: 'include' }).then((r) => r.ok ? r.json() : { followers: 0, following: 0 }).catch(() => ({ followers: 0, following: 0 })),
     ]).then(([profileData, allPosts, reviewsData, toolsData, countsData]) => {
@@ -138,7 +138,7 @@ export default function ProfilePage() {
 
   async function handleToolClick(tool: Tool) {
     // Track click
-    fetch(`/api/tools/${tool.id}/click`).catch(() => {});
+    fetch(`/api/tools/${tool.id}/click`, { credentials: 'include' }).catch(() => {});
     // Open affiliate URL
     if (tool.affiliateUrl) {
       window.open(tool.affiliateUrl, '_blank');

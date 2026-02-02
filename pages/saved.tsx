@@ -26,7 +26,7 @@ export default function SavedPage() {
   useEffect(() => {
     async function fetchSaved() {
       try {
-        const res = await fetch('/api/saved');
+        const res = await fetch('/api/saved', { credentials: 'include' });
         if (res.status === 401) {
           setError('Please sign in to view saved items');
           setLoading(false);
@@ -53,6 +53,7 @@ export default function SavedPage() {
     const res = await fetch('/api/saved/toggle', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ itemType: 'POST', itemId: postId }),
     });
     if (res.ok) {
@@ -64,6 +65,7 @@ export default function SavedPage() {
     const res = await fetch('/api/saved/toggle', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ itemType: 'PRO', itemId: proId }),
     });
     if (res.ok) {

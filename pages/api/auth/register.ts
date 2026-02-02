@@ -6,6 +6,7 @@ import prisma from '../../../lib/prisma';
 import { sendVerificationEmail } from '../../../lib/email';
 import { rateLimit } from '../../../lib/middleware/rate-limit';
 import { createAuditLog } from '../../../lib/audit';
+import { isValidEmail, validatePassword, validateName, normalizeEmail } from '../../../lib/validation';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 
@@ -21,24 +22,43 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   const { email, password, name, role } = req.body;
 
-  if (!email || !password || !role)
+  if (!email || !password || !role) {
     return res.status(400).json({ error: 'Missing fields' });
+  }
 
-  if (password.length < 8)
-    return res.status(400).json({ error: 'Password must be at least 8 characters' });
+  // Validate email format
+  const normalizedEmail = normalizeEmail(email);
+  if (!isValidEmail(normalizedEmail)) {
+    return res.status(400).json({ error: 'Please enter a valid email address' });
+  }
 
-  if (!['PRO', 'CLIENT'].includes(role))
+  // Validate password
+  const passwordValidation = validatePassword(password);
+  if (!passwordValidation.isValid) {
+    return res.status(400).json({ error: passwordValidation.error });
+  }
+
+  // Validate name if provided
+  if (name) {
+    const nameValidation = validateName(name);
+    if (!nameValidation.isValid) {
+      return res.status(400).json({ error: nameValidation.error });
+    }
+  }
+
+  if (!['PRO', 'CLIENT'].includes(role)) {
     return res.status(400).json({ error: 'Invalid role' });
+  }
 
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (existing) return res.status(400).json({ error: 'Email already in use' });
 
   const passwordHash = await bcrypt.hash(password, 10);
   const user = await prisma.user.create({
     data: {
-      email,
+      email: normalizedEmail,
       passwordHash,
-      name,
+      name: name ? name.trim() : null,
       role,
       emailVerified: false,
     },

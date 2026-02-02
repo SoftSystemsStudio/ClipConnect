@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Header from '../../components/Header';
+import { useToast } from '../../components/Toast';
 
 const HAIR_TYPES = [
   { value: '1', label: 'Type 1 - Straight' },
@@ -24,6 +25,7 @@ const STYLE_PREFERENCES = [
 
 export default function OnboardingClient() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [selectedHairTypes, setSelectedHairTypes] = useState<string[]>([]);
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
@@ -61,17 +63,19 @@ export default function OnboardingClient() {
       const res = await fetch('/api/profile/update', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(body),
       });
 
       if (res.ok) {
+        showToast('Profile saved successfully', 'success');
         router.push('/explore');
       } else {
-        const data = await res.json();
-        alert(data.error || 'Failed to save profile');
+        const data = await res.json().catch(() => ({}));
+        showToast(data.error || 'Failed to save profile', 'error');
       }
     } catch {
-      alert('An error occurred');
+      showToast('An error occurred', 'error');
     } finally {
       setLoading(false);
     }

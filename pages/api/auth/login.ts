@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import prisma from '../../../lib/prisma';
 import { rateLimit } from '../../../lib/middleware/rate-limit';
 import { createAuditLog } from '../../../lib/audit';
+import { isValidEmail, normalizeEmail } from '../../../lib/validation';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 
@@ -18,10 +19,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).end();
 
   const { email, password } = req.body;
-  if (!email || !password)
+  if (!email || !password) {
     return res.status(400).json({ error: 'Missing fields' });
+  }
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  // Validate and normalize email
+  const normalizedEmail = normalizeEmail(email);
+  if (!isValidEmail(normalizedEmail)) {
+    return res.status(400).json({ error: 'Please enter a valid email address' });
+  }
+
+  const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (!user) {
     await createAuditLog({
       action: 'LOGIN_FAILED',

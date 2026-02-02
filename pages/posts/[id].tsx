@@ -1,5 +1,7 @@
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
+import { useToast } from '../../components/Toast';
+import { useConfirm } from '../../components/ui/ConfirmDialog';
 
 type User = {
   id: number;
@@ -8,6 +10,8 @@ type User = {
 
 export default function PostDetail() {
   const router = useRouter();
+  const { showToast } = useToast();
+  const confirm = useConfirm();
   const { id } = router.query;
   const [post, setPost] = useState<any>(null);
   const [liked, setLiked] = useState(false);
@@ -28,7 +32,7 @@ export default function PostDetail() {
 
   useEffect(() => {
     if (!id) return;
-    fetch(`/api/posts/${id}`)
+    fetch(`/api/posts/${id}`, { credentials: 'include' })
       .then((r) => r.json())
       .then((data: any) => {
         setPost(data);
@@ -48,7 +52,7 @@ export default function PostDetail() {
       setLiked(!!data.liked);
       setPost((p: any) => ({ ...p, likeCount: data.likeCount }));
     } else if (res.status === 401) {
-      alert('Please sign in to like posts');
+      showToast('Please sign in to like posts', 'error');
     }
   }
 
@@ -56,6 +60,7 @@ export default function PostDetail() {
     const res = await fetch('/api/saved/toggle', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ itemType: 'POST', itemId: Number(id) }),
     });
     if (res.ok) {
@@ -65,7 +70,13 @@ export default function PostDetail() {
   }
 
   async function handleDelete() {
-    if (!confirm('Are you sure you want to delete this post?')) return;
+    const confirmed = await confirm({
+      title: 'Delete Post',
+      message: 'Are you sure you want to delete this post? This action cannot be undone.',
+      confirmText: 'Delete',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
     setDeleting(true);
     try {
       const res = await fetch(`/api/posts/${id}`, {
@@ -73,9 +84,10 @@ export default function PostDetail() {
         credentials: 'include',
       });
       if (res.ok) {
+        showToast('Post deleted successfully', 'success');
         router.push('/');
       } else {
-        alert('Failed to delete post');
+        showToast('Failed to delete post', 'error');
       }
     } finally {
       setDeleting(false);
@@ -96,8 +108,9 @@ export default function PostDetail() {
       const updated = await res.json();
       setPost(updated);
       setIsEditing(false);
+      showToast('Post updated successfully', 'success');
     } else {
-      alert('Failed to update post');
+      showToast('Failed to update post', 'error');
     }
   }
 

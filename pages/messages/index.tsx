@@ -21,7 +21,7 @@ export default function MessagesPage() {
   useEffect(() => {
     const fetchConversations = async () => {
       try {
-        const res = await fetch('/api/messages');
+        const res = await fetch('/api/messages', { credentials: 'include' });
         if (res.status === 401) {
           router.push('/signin');
           return;

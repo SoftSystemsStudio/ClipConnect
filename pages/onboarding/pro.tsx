@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Header from '../../components/Header';
+import { useToast } from '../../components/Toast';
 
 const SPECIALTIES = [
   'Fades', 'Braids', 'Locs', 'Natural Hair', 'Color', 'Cuts',
@@ -15,6 +16,7 @@ const HAIR_TYPES = [
 
 export default function OnboardingPro() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [bio, setBio] = useState('');
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
@@ -64,17 +66,19 @@ export default function OnboardingPro() {
       const res = await fetch('/api/profile/update', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(body),
       });
 
       if (res.ok) {
+        showToast('Profile saved successfully', 'success');
         router.push('/explore');
       } else {
-        const data = await res.json();
-        alert(data.error || 'Failed to save profile');
+        const data = await res.json().catch(() => ({}));
+        showToast(data.error || 'Failed to save profile', 'error');
       }
     } catch {
-      alert('An error occurred');
+      showToast('An error occurred', 'error');
     } finally {
       setLoading(false);
     }

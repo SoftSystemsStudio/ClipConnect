@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
+import { useToast } from '../components/Toast';
 
 export default function CreatePost() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [mediaUrls, setMediaUrls] = useState('');
   const [caption, setCaption] = useState('');
   const [styleTags, setStyleTags] = useState('');
@@ -32,12 +34,15 @@ export default function CreatePost() {
     const res = await fetch('/api/posts/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(body),
     });
     if (res.ok) {
+      showToast('Post created successfully', 'success');
       router.push('/explore');
     } else {
-      alert('Error creating post');
+      const data = await res.json().catch(() => ({}));
+      showToast(data.error || 'Error creating post', 'error');
     }
   }
 

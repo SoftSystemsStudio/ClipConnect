@@ -39,7 +39,7 @@ export default function ConversationPage() {
 
     const fetchMessages = async () => {
       try {
-        const res = await fetch(`/api/messages/${userId}`);
+        const res = await fetch(`/api/messages/${userId}`, { credentials: 'include' });
         if (res.status === 401) {
           router.push('/signin');
           return;
@@ -49,7 +49,7 @@ export default function ConversationPage() {
         setOtherUser(data.otherUser);
 
         // Get current user
-        const meRes = await fetch('/api/profile/me');
+        const meRes = await fetch('/api/profile/me', { credentials: 'include' });
         if (meRes.ok) {
           const meData = await meRes.json();
           setCurrentUserId(meData.id);
@@ -81,6 +81,7 @@ export default function ConversationPage() {
       const res = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           receiverId: parseInt(userId as string, 10),
           content: newMessage.trim(),
