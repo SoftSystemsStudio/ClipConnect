@@ -19,7 +19,7 @@ module.exports = [
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       'no-unused-vars': 'off',
       // Run Prettier as an ESLint rule and report formatting issues as errors
-      'prettier/prettier': ['error', require('./.prettierrc')],
+      'prettier/prettier': ['error', JSON.parse(require('fs').readFileSync('./.prettierrc', 'utf8'))],
     },
   },
 ]

@@ -1,0 +1,20 @@
+# robots.txt for ClipConnect
+
+User-agent: *
+Allow: /
+
+# Disallow private pages
+Disallow: /api/
+Disallow: /profile/edit
+Disallow: /onboarding/
+Disallow: /messages/
+Disallow: /bookings
+Disallow: /saved
+
+# Allow search engines to index public pages
+Allow: /explore
+Allow: /profiles/
+Allow: /posts/
+
+# Sitemap
+Sitemap: https://clipconnect.com/sitemap.xml
