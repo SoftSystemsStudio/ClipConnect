@@ -1,25 +1,18 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import crypto from 'crypto';
 import prisma from '../../../lib/prisma';
+import { sendPasswordResetEmail } from '../../../lib/email';
+import { rateLimit } from '../../../lib/middleware/rate-limit';
+import { createAuditLog } from '../../../lib/audit';
 
-// In-memory store for reset tokens (use Redis in production)
-// Maps token -> { email, expiresAt }
-const resetTokens = new Map<string, { email: string; expiresAt: number }>();
+// Strict rate limiting: 3 requests per hour
+const forgotPasswordRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  message: 'Too many password reset requests. Please try again later.',
+});
 
-// Clean up expired tokens periodically
-setInterval(() => {
-  const now = Date.now();
-  for (const [token, data] of resetTokens.entries()) {
-    if (data.expiresAt < now) {
-      resetTokens.delete(token);
-    }
-  }
-}, 5 * 60 * 1000);
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -43,33 +36,39 @@ export default async function handler(
 
   // Generate reset token
   const token = crypto.randomBytes(32).toString('hex');
-  const expiresAt = Date.now() + 60 * 60 * 1000; // 1 hour
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-  // Store token
-  resetTokens.set(token, { email, expiresAt });
+  // Invalidate any existing tokens for this user
+  await prisma.passwordResetToken.updateMany({
+    where: { userId: user.id, usedAt: null },
+    data: { usedAt: new Date() },
+  });
 
-  // In production, send email here
-  // For development, log the reset URL
-  const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
+  // Store token in database
+  await prisma.passwordResetToken.create({
+    data: {
+      userId: user.id,
+      token,
+      expiresAt,
+    },
+  });
 
-  if (process.env.NODE_ENV === 'development') {
-    console.log('Password reset URL:', resetUrl);
-  }
+  // Send email
+  await sendPasswordResetEmail(email, token);
 
-  // TODO: Implement email sending
-  // await sendEmail({
-  //   to: email,
-  //   subject: 'Reset your password',
-  //   body: `Click here to reset your password: ${resetUrl}`,
-  // });
+  await createAuditLog({
+    userId: user.id,
+    action: 'PASSWORD_RESET_REQUESTED',
+    entity: 'User',
+    entityId: user.id,
+    ipAddress: (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress,
+    userAgent: req.headers['user-agent'],
+  });
 
   return res.json({
     success: true,
     message: 'If an account exists, a reset link has been sent.',
-    // Only include token in development for testing
-    ...(process.env.NODE_ENV === 'development' && { token }),
   });
 }
 
-// Export for use in reset-password endpoint
-export { resetTokens };
+export default forgotPasswordRateLimit(handler);

@@ -14,6 +14,8 @@ model User {
   role            String
   profilePhotoUrl String?
   location        String?
+  emailVerified   Boolean  @default(false)
+  lastLoginAt     DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   professional    ProfessionalProfile?
@@ -25,6 +27,19 @@ model User {
   following       Follow[] @relation("user_follower")
   savedItems      SavedItem[]
   likes           Like[]
+  comments        Comment[]
+  sentMessages    Message[] @relation("sent_messages")
+  receivedMessages Message[] @relation("received_messages")
+  notifications   Notification[]
+  bookingsAsClient Booking[] @relation("client_bookings")
+  bookingsAsPro   Booking[] @relation("pro_bookings")
+  auditLogs       AuditLog[]
+  passwordResetTokens PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
+
+  @@index([email])
+  @@index([role])
+  @@index([location])
 }
 
 model ProfessionalProfile {
@@ -43,8 +58,12 @@ model ProfessionalProfile {
   reviewsCount          Int     @default(0)
   minCutDurationMinutes Int?
   maxCutDurationMinutes Int?
+  acceptingClients      Boolean @default(true)
+  responseTimeHours     Int?
   user                  User    @relation(fields: [userId], references: [id])
   tools                 ToolProduct[]
+
+  @@index([averageRating])
 }
 
 model ClientProfile {
@@ -68,11 +87,33 @@ model Post {
   hairTypeTags             String
   location                 String?
   createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt @default(now())
   likeCount                Int      @default(0)
   saveCount                Int      @default(0)
+  viewCount                Int      @default(0)
   estimatedDurationMinutes Int?
+  isPublished              Boolean  @default(true)
   professional             User     @relation(fields: [professionalId], references: [id])
   likes                    Like[]
+  comments                 Comment[]
+
+  @@index([professionalId])
+  @@index([createdAt])
+  @@index([location])
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  userId    Int
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([postId])
+  @@index([userId])
 }
 
 model ToolProduct {
@@ -85,6 +126,8 @@ model ToolProduct {
   clickCount    Int      @default(0)
   createdAt     DateTime @default(now())
   professional  ProfessionalProfile @relation(fields: [professionalId], references: [id])
+
+  @@index([professionalId])
 }
 
 model Review {
@@ -94,9 +137,15 @@ model Review {
   rating                Int
   text                  String?
   createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt @default(now())
   actualDurationMinutes Int?
+  isVerifiedBooking     Boolean  @default(false)
   professional          User     @relation("professional_reviews", fields: [professionalId], references: [id])
   client                User     @relation("client_reviews", fields: [clientId], references: [id])
+
+  @@index([professionalId])
+  @@index([clientId])
+  @@index([rating])
 }
 
 model Follow {
@@ -106,6 +155,10 @@ model Follow {
   createdAt               DateTime @default(now())
   follower                User     @relation("user_follower", fields: [followerUserId], references: [id])
   followedProfessional    User     @relation("user_followed", fields: [followedProfessionalId], references: [id])
+
+  @@unique([followerUserId, followedProfessionalId])
+  @@index([followerUserId])
+  @@index([followedProfessionalId])
 }
 
 model SavedItem {
@@ -115,6 +168,9 @@ model SavedItem {
   itemId    Int
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, itemType, itemId])
+  @@index([userId])
 }
 
 model Like {
@@ -123,7 +179,102 @@ model Like {
   postId    Int
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
-  post      Post     @relation(fields: [postId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@unique([userId, postId])
+  @@index([postId])
+}
+
+model Message {
+  id          Int      @id @default(autoincrement())
+  senderId    Int
+  receiverId  Int
+  content     String
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  sender      User     @relation("sent_messages", fields: [senderId], references: [id])
+  receiver    User     @relation("received_messages", fields: [receiverId], references: [id])
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  type      String   // 'follow', 'like', 'comment', 'review', 'message', 'booking'
+  title     String
+  message   String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+model Booking {
+  id              Int      @id @default(autoincrement())
+  clientId        Int
+  professionalId  Int
+  scheduledAt     DateTime
+  duration        Int      // minutes
+  status          String   @default("pending") // pending, confirmed, cancelled, completed
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt @default(now())
+  client          User     @relation("client_bookings", fields: [clientId], references: [id])
+  professional    User     @relation("pro_bookings", fields: [professionalId], references: [id])
+
+  @@index([clientId])
+  @@index([professionalId])
+  @@index([scheduledAt])
+  @@index([status])
+}
+
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([token])
+  @@index([userId])
+}
+
+model EmailVerificationToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([token])
+  @@index([userId])
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  action    String
+  entity    String
+  entityId  Int?
+  details   String?  // JSON string
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([entity])
+  @@index([createdAt])
 }

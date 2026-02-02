@@ -23,6 +23,7 @@ setInterval(() => {
 interface RateLimitOptions {
   windowMs?: number; // Time window in milliseconds
   max?: number; // Max requests per window
+  message?: string; // Custom error message
   keyGenerator?: (req: NextApiRequest) => string;
 }
 
@@ -30,6 +31,7 @@ export function rateLimit(options: RateLimitOptions = {}) {
   const {
     windowMs = 60 * 1000, // 1 minute default
     max = 60, // 60 requests per minute default
+    message = 'Too many requests. Please try again later.',
     keyGenerator = (req) => {
       // Use IP address or forwarded IP
       const forwarded = req.headers['x-forwarded-for'];
@@ -66,7 +68,7 @@ export function rateLimit(options: RateLimitOptions = {}) {
       if (entry.count > max) {
         return res.status(429).json({
           success: false,
-          error: 'Too many requests. Please try again later.',
+          error: message,
         });
       }
 

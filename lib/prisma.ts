@@ -1,31 +1,25 @@
-// Ensure the environment requests a binary engine for Prisma in test/dev
-process.env.PRISMA_CLIENT_ENGINE_TYPE =
-  process.env.PRISMA_CLIENT_ENGINE_TYPE || 'binary';
-
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '@prisma/client/index.js';
+import { PrismaLibSql } from '@prisma/adapter-libsql';
 
 declare global {
-  // allow global prisma across HMR in development
-  var prisma: any;
+  var prisma: PrismaClient | undefined;
 }
 
-// Build options dynamically so Prisma v7 (which may require passing
-// datasources/options) works in CI while remaining compatible with v4.
-const clientOptions: any = {};
-if (process.env.DATABASE_URL) {
-  clientOptions.datasources = { db: { url: process.env.DATABASE_URL } };
-}
+const createPrismaClient = () => {
+  const dbUrl = process.env.DATABASE_URL || 'file:./prisma/dev.db';
 
-// Ensure a compatible engine type for Prisma client in test/dev environments.
-// Prisma v7 may default to engine type 'client' which requires additional options;
-// prefer the binary engine for local tests unless explicitly overridden.
-if (!clientOptions.engine) {
-  clientOptions.engine = {
-    type: process.env.PRISMA_CLIENT_ENGINE_TYPE || 'binary',
-  };
-}
+  const adapter = new PrismaLibSql({
+    url: dbUrl,
+  });
 
-const prisma = global.prisma || new PrismaClient(clientOptions);
+  return new PrismaClient({
+    adapter,
+    log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+  });
+};
+
+const prisma = global.prisma ?? createPrismaClient();
+
 if (process.env.NODE_ENV !== 'production') global.prisma = prisma;
 
 export default prisma;
